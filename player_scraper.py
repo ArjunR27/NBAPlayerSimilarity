@@ -56,4 +56,4 @@ def main(url, header_written):
 
 if __name__ == "__main__":
     main(url='https://www.basketball-reference.com/leagues/NBA_2024_totals.html', header_written=False)
-    main(url='https://www.basketball-reference.com/leagues/NBA_2000_totals.html', header_written=True)
+    main(url='https://www.basketball-reference.com/leagues/NBA_2023_totals.html', header_written=True)

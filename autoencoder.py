@@ -8,11 +8,16 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_samples
 from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt 
+import plotly.express as px
+
 def main():
     df = pd.read_csv('player_data.csv')
-    df.drop(['awards', 'name_display', 'pos', 'team_name_abbr'], axis=1, inplace=True)
+    df.drop(['awards', 'pos', 'team_name_abbr'], axis=1, inplace=True)
     df = df.dropna()
+    player_names = df['name_display'].values
+    df.drop(['name_display'], axis=1, inplace=True)
     scaler = StandardScaler()
     df_scaled = scaler.fit_transform(df)
     
@@ -20,7 +25,52 @@ def main():
 
     # 1) using elbow method, k = 6-8 clusters
     
-    elbow_graph(df_scaled)
+    # elbow_graph(df_scaled)
+    ae, latent_representation = create_autoencoder(df_scaled)
+
+    kmeans = KMeans(n_clusters=8, random_state=42)
+    cluster_labels = kmeans.fit_predict(latent_representation)
+
+    cluster_df = pd.DataFrame()
+    cluster_df['Cluster'] = cluster_labels
+    cluster_df['Name'] = player_names
+
+    player_clusters = pd.DataFrame({'Player': player_names, 'Cluster': cluster_labels})
+    print(player_clusters)
+
+
+    # This is used to reduce the 11-dimension to a further reduced 2 so that we can visualize it using a graph
+    pca = PCA(n_components=2)
+    reduced_latent = pca.fit_transform(latent_representation)
+
+    # 2 dimensional plot
+    c_df = pd.DataFrame(reduced_latent, columns=['PCA Component 1', 'PCA Component 2'])
+    c_df['Cluster'] = cluster_labels
+    c_df['Name'] = player_names
+
+    fig = px.scatter(c_df, x='PCA Component 1', y='PCA Component 2', color='Cluster', hover_name='Name', 
+                    title="K-Means Clusters", 
+                    labels={'Feature 1': 'PCA Component 1', 'Feature 2': 'PCA Component 2'})
+
+
+    fig.show()
+
+
+    
+    """# 3 dimensional plot
+    pca = PCA(n_components=3)
+    reduced_latent = pca.fit_transform(latent_representation)
+    c_df = pd.DataFrame(reduced_latent, columns=['PCA Component 1', 'PCA Component 2', 'PCA Component 3'])
+    c_df['Cluster'] = cluster_labels
+    c_df['Name'] = player_names
+
+
+    fig = px.scatter_3d(c_df, x='PCA Component 1', y='PCA Component 2', z='PCA Component 3', color='Cluster', hover_name='Name', 
+                    title="K-Means Clusters", 
+                    labels={'Feature 1': 'PCA Component 1', 'Feature 2': 'PCA Component 2', 'Feature 3': 'PCA Component 3'})
+
+
+    fig.show()"""
 
 def elbow_graph(data):
     tf.random.set_seed(42)
@@ -61,15 +111,11 @@ def create_autoencoder(data):
 
     autoencoder.compile(optimizer='adam', loss='mse')
 
-    autoencoder.fit(data, data, epochs=45, shuffle=True)
+    autoencoder.fit(data, data, epochs=50)
 
     latent_representation = encoder.predict(data)
     
     return autoencoder, latent_representation
-
-def cluster(data):
-
-    return
 
 
 if __name__ == "__main__":
