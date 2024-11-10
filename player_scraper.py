@@ -4,8 +4,7 @@ import time
 import re
 from bs4 import BeautifulSoup
 
-def main():
-    url = 'https://www.basketball-reference.com/leagues/NBA_2024_totals.html'  # Update URL for 2023-2024 season
+def main(url, header_written):
     try:
         response = requests.get(url)
         response.raise_for_status()  # Check if request was successful
@@ -46,13 +45,15 @@ def main():
         if player_row:
             player_data.append(player_row)
     
-    with open('player_data.csv', 'w', newline='') as csvfile:
+    with open('player_data.csv', 'a', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=sorted(columns))
-        writer.writeheader()
+        if not header_written:
+            writer.writeheader()
         for row in player_data:
             writer.writerow(row)
     
     time.sleep(3)
 
 if __name__ == "__main__":
-    main()
+    main(url='https://www.basketball-reference.com/leagues/NBA_2024_totals.html', header_written=False)
+    main(url='https://www.basketball-reference.com/leagues/NBA_2000_totals.html', header_written=True)
