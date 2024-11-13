@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow import keras
 import numpy as np
 import pandas as pd
+import random
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import Dense, Input
 from sklearn.model_selection import train_test_split
@@ -13,7 +14,12 @@ import matplotlib.pyplot as plt
 import plotly.express as px
 
 def main():
-    df = pd.read_csv('player_data1.csv')
+    # Ensuring reproductibility by setting the random seeds
+    tf.random.set_seed(42)
+    np.random.seed(42)
+    random.seed(42)
+
+    df = pd.read_csv('player_data.csv')
     df.drop(['awards', 'pos', 'team_name_abbr'], axis=1, inplace=True)
     df = df.dropna()
     player_names = df['name_display'].values
@@ -48,10 +54,10 @@ def main():
 
     # This is used to reduce the 11-dimension to a further reduced 2 so that we can visualize it using a graph
     pca = PCA(n_components=2)
-    reduced_latent = pca.fit_transform(latent_representation)
+    latent_representation = pca.fit_transform(latent_representation)
 
     # 2 dimensional plot
-    c_df = pd.DataFrame(reduced_latent, columns=['PCA Component 1', 'PCA Component 2'])
+    c_df = pd.DataFrame(latent_representation, columns=['PCA Component 1', 'PCA Component 2'])
     c_df['Cluster'] = cluster_labels
     c_df['Name'] = player_names
 
@@ -80,8 +86,6 @@ def main():
     fig.show()"""
 
 def elbow_graph(data):
-    tf.random.set_seed(42)
-    np.random.seed(42)
     n_inputs = data.shape[1]
 
     ae, latent_prediction= create_autoencoder(data)
@@ -98,8 +102,6 @@ def elbow_graph(data):
     plt.show()
 
 def create_autoencoder(data):
-    tf.random.set_seed(42)
-    np.random.seed(42)
     n_inputs = data.shape[1]
 
     # Encoder
