@@ -45,7 +45,7 @@ def main(url, header_written):
         if player_row:
             player_data.append(player_row)
     
-    with open('player_data.csv', 'a', newline='') as csvfile:
+    with open('player_data1.csv', 'a', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=sorted(columns))
         if not header_written:
             writer.writeheader()
@@ -55,5 +55,6 @@ def main(url, header_written):
     time.sleep(3)
 
 if __name__ == "__main__":
-    main(url='https://www.basketball-reference.com/leagues/NBA_2024_totals.html', header_written=False)
-    main(url='https://www.basketball-reference.com/leagues/NBA_2023_totals.html', header_written=True)
+    # main(url='https://www.basketball-reference.com/leagues/NBA_2024_totals.html', header_written=False)
+    # main(url='https://www.basketball-reference.com/leagues/NBA_2023_totals.html', header_written=True)
+    main(url="https://www.basketball-reference.com/leagues/NBA_2024_per_game.html", header_written=False)

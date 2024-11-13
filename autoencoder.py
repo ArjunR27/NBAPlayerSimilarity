@@ -5,21 +5,23 @@ import pandas as pd
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import Dense, Input
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.metrics import silhouette_samples
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt 
 import plotly.express as px
 
 def main():
-    df = pd.read_csv('player_data.csv')
+    df = pd.read_csv('player_data1.csv')
     df.drop(['awards', 'pos', 'team_name_abbr'], axis=1, inplace=True)
     df = df.dropna()
     player_names = df['name_display'].values
     df.drop(['name_display'], axis=1, inplace=True)
+    
     scaler = StandardScaler()
     df_scaled = scaler.fit_transform(df)
+
     
     # Trying to find optimal number of k clusters
 
@@ -28,7 +30,11 @@ def main():
     # elbow_graph(df_scaled)
     ae, latent_representation = create_autoencoder(df_scaled)
 
-    kmeans = KMeans(n_clusters=8, random_state=42)
+    """dbscan = DBSCAN(eps=3, min_samples=3)
+    cluster_labels = dbscan.fit_predict(latent_representation)"""
+    
+
+    kmeans = KMeans(n_clusters=6, random_state=42)
     cluster_labels = kmeans.fit_predict(latent_representation)
 
     cluster_df = pd.DataFrame()
@@ -36,6 +42,7 @@ def main():
     cluster_df['Name'] = player_names
 
     player_clusters = pd.DataFrame({'Player': player_names, 'Cluster': cluster_labels})
+    player_clusters.to_csv('player_clusters.csv')
     print(player_clusters)
 
 
