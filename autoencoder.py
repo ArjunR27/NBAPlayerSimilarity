@@ -19,7 +19,7 @@ def main():
     np.random.seed(42)
     random.seed(42)
 
-    df = pd.read_csv('player_data.csv')
+    df = pd.read_csv('player_data1.csv')
     df.drop(['awards', 'pos', 'team_name_abbr'], axis=1, inplace=True)
     df = df.dropna()
     player_names = df['name_display'].values
@@ -53,6 +53,8 @@ def main():
 
 
     # This is used to reduce the 11-dimension to a further reduced 2 so that we can visualize it using a graph
+    # I feel like we shouldnt be using this because it may defeat the purpose of the autoencoder
+    # Maybe look into finding out which factors are most important for finding player similairty and graph using that instead of pca?
     pca = PCA(n_components=2)
     latent_representation = pca.fit_transform(latent_representation)
 
@@ -105,6 +107,8 @@ def create_autoencoder(data):
     n_inputs = data.shape[1]
 
     # Encoder
+    # Intorduce more layers for encoder and decoder if we want to reduce latent space to smaller dimension
+    # This way the neural network is able to squish smaller and smaller without hopefully losign too much data per layer
     input_data = Input(shape=(n_inputs, ))
     encoded = Dense(int(n_inputs/2), activation='relu')(input_data)
     encoded = Dense(int(n_inputs/4), activation='relu')(encoded)
