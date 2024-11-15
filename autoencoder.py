@@ -25,7 +25,7 @@ def main():
     player_names = df['name_display'].values
     df.drop(['name_display'], axis=1, inplace=True)
     
-    scaler = StandardScaler()
+    scaler = MinMaxScaler()
     df_scaled = scaler.fit_transform(df)
 
     
@@ -55,8 +55,8 @@ def main():
     # This is used to reduce the 11-dimension to a further reduced 2 so that we can visualize it using a graph
     # I feel like we shouldnt be using this because it may defeat the purpose of the autoencoder
     # Maybe look into finding out which factors are most important for finding player similairty and graph using that instead of pca?
-    pca = PCA(n_components=2)
-    latent_representation = pca.fit_transform(latent_representation)
+    # pca = PCA(n_components=2)
+    # latent_representation = pca.fit_transform(latent_representation)
 
     # 2 dimensional plot
     c_df = pd.DataFrame(latent_representation, columns=['PCA Component 1', 'PCA Component 2'])
@@ -73,19 +73,19 @@ def main():
 
     
     """# 3 dimensional plot
-    pca = PCA(n_components=3)
-    reduced_latent = pca.fit_transform(latent_representation)
-    c_df = pd.DataFrame(reduced_latent, columns=['PCA Component 1', 'PCA Component 2', 'PCA Component 3'])
+    # pca = PCA(n_components=3)
+    # educed_latent = pca.fit_transform(latent_representation)
+    c_df = pd.DataFrame(latent_representation, columns=['PCA Component 1', 'PCA Component 2', 'PCA Component 3'])
     c_df['Cluster'] = cluster_labels
     c_df['Name'] = player_names
 
 
     fig = px.scatter_3d(c_df, x='PCA Component 1', y='PCA Component 2', z='PCA Component 3', color='Cluster', hover_name='Name', 
                     title="K-Means Clusters", 
-                    labels={'Feature 1': 'PCA Component 1', 'Feature 2': 'PCA Component 2', 'Feature 3': 'PCA Component 3'})
+                    labels={'Feature 1': 'PCA Component 1', 'Feature 2': 'PCA Component 2', 'Feature 3': 'PCA Component 3'})"""
 
 
-    fig.show()"""
+    fig.show()
 
 def elbow_graph(data):
     n_inputs = data.shape[1]
@@ -106,29 +106,28 @@ def elbow_graph(data):
 def create_autoencoder(data):
     n_inputs = data.shape[1]
 
-    # Encoder
-    # Intorduce more layers for encoder and decoder if we want to reduce latent space to smaller dimension
-    # This way the neural network is able to squish smaller and smaller without hopefully losign too much data per layer
+    # Encoder with gradual reduction
     input_data = Input(shape=(n_inputs, ))
-    encoded = Dense(int(n_inputs/2), activation='relu')(input_data)
-    encoded = Dense(int(n_inputs/4), activation='relu')(encoded)
-    latent = Dense(11, activation='relu')(encoded)
+    encoded = Dense(int(n_inputs / 4), activation='relu')(input_data)
+    encoded = Dense(int(n_inputs / 6), activation='relu')(encoded)
+    latent = Dense(2, activation='relu')(encoded)    # Latent space now reduced to 2 dimensions
 
-    # Decoder
-    decoded = Dense(int(n_inputs/4), activation='relu')(latent)
-    decoded = Dense(int(n_inputs/2), activation='relu')(decoded)
+    # Decoder with gradual expansion
+    decoded = Dense(10, activation='relu')(latent)
+    decoded = Dense(int(n_inputs / 6), activation='relu')(decoded)
+    decoded = Dense(int(n_inputs / 4), activation='relu')(decoded)
     output_data = Dense(n_inputs, activation='sigmoid')(decoded)
 
     autoencoder = Model(input_data, output_data)
     encoder = Model(input_data, latent)
 
     autoencoder.compile(optimizer='adam', loss='mse')
-
-    autoencoder.fit(data, data, epochs=50)
+    autoencoder.fit(data, data, epochs=35)
 
     latent_representation = encoder.predict(data)
     
     return autoencoder, latent_representation
+
 
 
 if __name__ == "__main__":
