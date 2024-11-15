@@ -1,15 +1,13 @@
 import tensorflow as tf
-from tensorflow import keras
 import numpy as np
 import pandas as pd
 import random
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import Dense, Input
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import silhouette_samples
-from sklearn.cluster import KMeans, DBSCAN
-from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt 
 import plotly.express as px
 
@@ -19,6 +17,7 @@ def main():
     np.random.seed(42)
     random.seed(42)
 
+    # Player Averages
     df = pd.read_csv('player_data1.csv')
     df.drop(['awards', 'pos', 'team_name_abbr'], axis=1, inplace=True)
     df = df.dropna()
@@ -28,18 +27,8 @@ def main():
     scaler = MinMaxScaler()
     df_scaled = scaler.fit_transform(df)
 
-    
-    # Trying to find optimal number of k clusters
-
-    # 1) using elbow method, k = 6-8 clusters
-    
-    # elbow_graph(df_scaled)
     ae, latent_representation = create_autoencoder(df_scaled)
-
-    """dbscan = DBSCAN(eps=3, min_samples=3)
-    cluster_labels = dbscan.fit_predict(latent_representation)"""
     
-
     kmeans = KMeans(n_clusters=6, random_state=42)
     cluster_labels = kmeans.fit_predict(latent_representation)
 
@@ -51,42 +40,12 @@ def main():
     player_clusters.to_csv('player_clusters.csv')
     print(player_clusters)
 
-
-    # This is used to reduce the 11-dimension to a further reduced 2 so that we can visualize it using a graph
-    # I feel like we shouldnt be using this because it may defeat the purpose of the autoencoder
-    # Maybe look into finding out which factors are most important for finding player similairty and graph using that instead of pca?
-    # pca = PCA(n_components=2)
-    # latent_representation = pca.fit_transform(latent_representation)
-
     # 2 dimensional plot
-    c_df = pd.DataFrame(latent_representation, columns=['PCA Component 1', 'PCA Component 2'])
-    c_df['Cluster'] = cluster_labels
-    c_df['Name'] = player_names
+    plot_2d(latent_representation, cluster_labels, player_names)
 
-    fig = px.scatter(c_df, x='PCA Component 1', y='PCA Component 2', color='Cluster', hover_name='Name', 
-                    title="K-Means Clusters", 
-                    labels={'Feature 1': 'PCA Component 1', 'Feature 2': 'PCA Component 2'})
-
-
-    fig.show()
-
-
+    # 3 dimensional plot
+    # plot_3d(latent_representation, cluster_labels, player_names)
     
-    """# 3 dimensional plot
-    # pca = PCA(n_components=3)
-    # educed_latent = pca.fit_transform(latent_representation)
-    c_df = pd.DataFrame(latent_representation, columns=['PCA Component 1', 'PCA Component 2', 'PCA Component 3'])
-    c_df['Cluster'] = cluster_labels
-    c_df['Name'] = player_names
-
-
-    fig = px.scatter_3d(c_df, x='PCA Component 1', y='PCA Component 2', z='PCA Component 3', color='Cluster', hover_name='Name', 
-                    title="K-Means Clusters", 
-                    labels={'Feature 1': 'PCA Component 1', 'Feature 2': 'PCA Component 2', 'Feature 3': 'PCA Component 3'})"""
-
-
-    fig.show()
-
 def elbow_graph(data):
     n_inputs = data.shape[1]
 
@@ -103,16 +62,35 @@ def elbow_graph(data):
     plt.title('elbow method')
     plt.show()
 
+def plot_2d(latent_representation, cluster_labels, player_names):
+    c_df = pd.DataFrame(latent_representation, columns=['LR1', 'LR2'])
+    c_df['Cluster'] = cluster_labels
+    c_df['Name'] = player_names
+
+    fig = px.scatter(c_df, x='LR1', y='LR2', color='Cluster', hover_name='Name', 
+                    title="K-Means Clusters", 
+                    labels={'Feature 1': 'LR1', 'Feature 2': 'LR2'})
+
+
+    fig.show()
+
+def plot_3d(latent_representation, cluster_labels, player_names):
+    c_df = pd.DataFrame(latent_representation, columns=['LR1', 'LR2', 'LR3'])
+    c_df['Cluster'] = cluster_labels
+    c_df['Name'] = player_names
+    fig = px.scatter_3d(c_df, x='LR1', y='LR2', z='LR3', color='Cluster', hover_name='Name', 
+                    title="K-Means Clusters", 
+                    labels={'Feature 1': 'LR1', 'Feature 2': 'LR2', 'Feature 3': 'LR3'})
+    fig.show()
+    
 def create_autoencoder(data):
     n_inputs = data.shape[1]
 
-    # Encoder with gradual reduction
     input_data = Input(shape=(n_inputs, ))
     encoded = Dense(int(n_inputs / 4), activation='relu')(input_data)
     encoded = Dense(int(n_inputs / 6), activation='relu')(encoded)
-    latent = Dense(2, activation='relu')(encoded)    # Latent space now reduced to 2 dimensions
+    latent = Dense(2, activation='relu')(encoded) 
 
-    # Decoder with gradual expansion
     decoded = Dense(10, activation='relu')(latent)
     decoded = Dense(int(n_inputs / 6), activation='relu')(decoded)
     decoded = Dense(int(n_inputs / 4), activation='relu')(decoded)
