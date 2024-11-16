@@ -10,6 +10,7 @@ from sklearn.metrics import silhouette_samples
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt 
 import plotly.express as px
+import math
 
 def main():
     # Ensuring reproductibility by setting the random seeds
@@ -38,13 +39,27 @@ def main():
 
     player_clusters = pd.DataFrame({'Player': player_names, 'Cluster': cluster_labels})
     player_clusters.to_csv('player_clusters.csv')
-    print(player_clusters)
+    # print(player_clusters)
 
     # 2 dimensional plot
-    plot_2d(latent_representation, cluster_labels, player_names)
+    c_df2 = pd.DataFrame(latent_representation, columns=['LR1', 'LR2'])
+    c_df2['Cluster'] = cluster_labels
+    c_df2['Name'] = player_names
+    plot_2d(c_df2)
 
     # 3 dimensional plot
-    # plot_3d(latent_representation, cluster_labels, player_names)
+    """
+    c_df3 = pd.DataFrame(latent_representation, columns=['LR1', 'LR2', 'LR3])
+    c_df3['Cluster'] = cluster_labels
+    c_df3['Name'] = player_names
+    plot_3d(c_df2)
+    """
+
+    player_name = input("What player do you want to find similar players for? ")
+    num_players = int(input("How many similar players are you looking for? "))
+
+    find_similar_players(c_df2, player_name, num_players)
+
     
 def elbow_graph(data):
     n_inputs = data.shape[1]
@@ -62,22 +77,29 @@ def elbow_graph(data):
     plt.title('elbow method')
     plt.show()
 
-def plot_2d(latent_representation, cluster_labels, player_names):
-    c_df = pd.DataFrame(latent_representation, columns=['LR1', 'LR2'])
-    c_df['Cluster'] = cluster_labels
-    c_df['Name'] = player_names
+def find_similar_players(c_df, player_name, num_players):
+    # Need to find the top [num_players] closest to player_name
+    result = c_df[c_df['Name'] == player_name]
+    distance_dict = {}
+    for index, row in c_df.iterrows():
+        dist = math.sqrt(math.pow(result['LR1']-row['LR1'], 2) + (math.pow(result['LR2']-row['LR2'], 2)))
+        distance_dict[row['Name']] = dist
+        # Calculate distance from result point to each player
+    
+    sorted_dict = sorted(distance_dict.items(), key=lambda x:x[1])
 
+    # Ignore the first point because that is the player itself
+    for i in range(num_players):
+        print(sorted_dict[1+i])
+
+def plot_2d(c_df):
     fig = px.scatter(c_df, x='LR1', y='LR2', color='Cluster', hover_name='Name', 
-                    title="K-Means Clusters", 
-                    labels={'Feature 1': 'LR1', 'Feature 2': 'LR2'})
-
-
+                     title="K-Means Clusters", 
+                     labels={'Feature 1': 'LR1', 'Feature 2': 'LR2'})
     fig.show()
 
-def plot_3d(latent_representation, cluster_labels, player_names):
-    c_df = pd.DataFrame(latent_representation, columns=['LR1', 'LR2', 'LR3'])
-    c_df['Cluster'] = cluster_labels
-    c_df['Name'] = player_names
+
+def plot_3d(c_df):
     fig = px.scatter_3d(c_df, x='LR1', y='LR2', z='LR3', color='Cluster', hover_name='Name', 
                     title="K-Means Clusters", 
                     labels={'Feature 1': 'LR1', 'Feature 2': 'LR2', 'Feature 3': 'LR3'})
