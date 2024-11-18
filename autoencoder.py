@@ -30,7 +30,7 @@ def main():
 
     ae, latent_representation = create_autoencoder(df_scaled)
     
-    kmeans = KMeans(n_clusters=6, random_state=42)
+    kmeans = KMeans(n_clusters=10, random_state=42)
     cluster_labels = kmeans.fit_predict(latent_representation)
 
     cluster_df = pd.DataFrame()
