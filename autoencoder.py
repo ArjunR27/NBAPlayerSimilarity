@@ -30,7 +30,7 @@ def main():
     df_scaled = scaler.fit_transform(df)
 
     ae, latent_representation = create_autoencoder(df_scaled)
-    num_clusters = 6
+    num_clusters = 10
     kmeans = KMeans(n_clusters=num_clusters, random_state=42)
     cluster_labels = kmeans.fit_predict(latent_representation)
 
@@ -96,22 +96,25 @@ def find_similar_players(c_df, player_name, num_players):
     for i in range(num_players):
         print(sorted_dict[1+i])
 
-def describe_clusters(c_df, stat_df):    
+def describe_clusters(c_df, stat_df): 
+    # Can maybe use cluster centroids instead of using all players? 
+
     merged_df = pd.merge(c_df, stat_df, on='Name')
     merged_df.drop(['games', 'games_started'], axis=1, inplace=True)
     
-    stat_df.drop(['games', 'games_started'], axis=1, inplace=True)
-    stat_cols = [col for col in stat_df.columns if col != 'Name']
+    stat_df.drop(['Name','games', 'games_started'], axis=1, inplace=True)
+    stat_cols = [col for col in stat_df.columns]
 
-    cluster_vals = merged_df.melt(id_vars=['Name', 'Cluster'],
-                                  value_vars=stat_cols,
+    cluster_means = merged_df.groupby('Cluster')[stat_cols].mean().reset_index()
+
+    cluster_vals = cluster_means.melt(id_vars=['Cluster'],
                                   var_name='Stat',
-                                  value_name='Value')
+                                  value_name='Avg Value')
     fig = px.box(cluster_vals,
                  x='Stat',
-                 y='Value',
+                 y='Avg Value',
                  color='Cluster',
-                 title='Player Stat by Cluster',
+                 title='Average Player Stat by Cluster',
                  color_discrete_sequence=px.colors.qualitative.Set1,
                  points='all')
     fig.update_layout(
