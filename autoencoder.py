@@ -20,7 +20,7 @@ def main():
 
     # Player Averages
     df = pd.read_csv('player_data1.csv')
-    df.drop(['awards', 'pos', 'team_name_abbr'], axis=1, inplace=True)
+    df.drop(['age', 'awards', 'pos', 'team_name_abbr'], axis=1, inplace=True)
     df = df.dropna()
     player_names = df['name_display'].values
     df.drop(['name_display'], axis=1, inplace=True)
@@ -60,6 +60,10 @@ def main():
 
     find_similar_players(c_df2, player_name, num_players)
 
+    # Next Step
+        # Add a way to get the similar players and see their statistics 
+        # Maybe find a way to describe their playstyles? 
+
     
 def elbow_graph(data):
     n_inputs = data.shape[1]
@@ -73,7 +77,7 @@ def elbow_graph(data):
     sum_squared_distances = np.array(sum_squared_distances).reshape(-1, 2)
     plt.plot(sum_squared_distances  [:, 0], sum_squared_distances[:, 1], 'bo-')
     plt.xlabel("num clusters")
-    plt.ylabel('sum of squared sitance')
+    plt.ylabel('sum of squared distance')
     plt.title('elbow method')
     plt.show()
 
