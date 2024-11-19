@@ -30,7 +30,7 @@ def main():
     df_scaled = scaler.fit_transform(df)
 
     ae, latent_representation = create_autoencoder(df_scaled)
-    num_clusters = 10
+    num_clusters = 8
     kmeans = KMeans(n_clusters=num_clusters, random_state=42)
     cluster_labels = kmeans.fit_predict(latent_representation)
 
@@ -55,9 +55,9 @@ def main():
     plot_3d(c_df2)
     """
 
-    # player_name = input("What player do you want to find similar players for? ")
-    # num_players = int(input("How many similar players are you looking for? "))
-    # find_similar_players(c_df2, player_name, num_players)
+    player_name = input("What player do you want to find similar players for? ")
+    num_players = int(input("How many similar players are you looking for? "))
+    find_similar_players(c_df2, player_name, num_players)
     
     player_names_series = pd.Series(player_names, name='Name')
     df_with_names = df.copy()
@@ -65,8 +65,6 @@ def main():
 
     describe_clusters(c_df2, df_with_names)
 
-
-    
 def elbow_graph(data): 
     n_inputs = data.shape[1]
 
@@ -85,20 +83,22 @@ def elbow_graph(data):
 
 def find_similar_players(c_df, player_name, num_players):
     # Need to find the top [num_players] closest to player_name
+    
     result = c_df[c_df['Name'] == player_name]
     distance_dict = {}
     for _, row in c_df.iterrows():
         # Calculate distance from result point to each player
         dist = math.sqrt(math.pow(result['LR1']-row['LR1'], 2) + (math.pow(result['LR2']-row['LR2'], 2)))
         distance_dict[row['Name']] = dist
+    
     sorted_dict = sorted(distance_dict.items(), key=lambda x:x[1])
+    
     # Ignore the first point because that is the player itself
     for i in range(num_players):
         print(sorted_dict[1+i])
 
-def describe_clusters(c_df, stat_df): 
-    # Can maybe use cluster centroids instead of using all players? 
-
+def describe_clusters(c_df, stat_df):
+    # Using averages per cluster for each stat
     merged_df = pd.merge(c_df, stat_df, on='Name')
     merged_df.drop(['games', 'games_started'], axis=1, inplace=True)
     
@@ -149,7 +149,7 @@ def create_autoencoder(data):
     encoded = Dense(int(n_inputs / 6), activation='relu')(encoded)
     latent = Dense(2, activation='relu')(encoded) 
 
-    decoded = Dense(10, activation='relu')(latent)
+    decoded = Dense(8, activation='relu')(latent)
     decoded = Dense(int(n_inputs / 6), activation='relu')(decoded)
     decoded = Dense(int(n_inputs / 4), activation='relu')(decoded)
     output_data = Dense(n_inputs, activation='sigmoid')(decoded)
