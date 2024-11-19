@@ -7,7 +7,7 @@ from tensorflow.keras.layers import Dense, Input
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import silhouette_samples
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN
 import matplotlib.pyplot as plt 
 import plotly.express as px
 import math
@@ -30,7 +30,10 @@ def main():
     df_scaled = scaler.fit_transform(df)
 
     ae, latent_representation = create_autoencoder(df_scaled)
-    num_clusters = 8
+
+    # elbow_graph(df_scaled)
+    
+    num_clusters = 7
     kmeans = KMeans(n_clusters=num_clusters, random_state=42)
     cluster_labels = kmeans.fit_predict(latent_representation)
 
@@ -55,15 +58,18 @@ def main():
     plot_3d(c_df2)
     """
 
-    player_name = input("What player do you want to find similar players for? ")
-    num_players = int(input("How many similar players are you looking for? "))
-    find_similar_players(c_df2, player_name, num_players)
-    
     player_names_series = pd.Series(player_names, name='Name')
     df_with_names = df.copy()
     df_with_names['Name'] = player_names_series.values
 
-    describe_clusters(c_df2, df_with_names)
+    player_name = input("What player do you want to find similar players for? ")
+    num_players = int(input("How many similar players are you looking for? "))
+    
+    
+    find_similar_players(c_df2, df_with_names, player_name, num_players)
+    
+
+    # describe_clusters(c_df2, df_with_names)
 
 def elbow_graph(data): 
     n_inputs = data.shape[1]
@@ -81,21 +87,45 @@ def elbow_graph(data):
     plt.title('elbow method')
     plt.show()
 
-def find_similar_players(c_df, player_name, num_players):
-    # Need to find the top [num_players] closest to player_name
+def calculate_distance(row, target_player):
+    return math.sqrt(math.pow(target_player['LR1']-row['LR1'], 2) + (math.pow(target_player['LR2']-row['LR2'], 2)))
+
+def find_similar_players(c_df, stat_df, player_name, num_players):
+    merged_df = pd.merge(c_df, stat_df, on='Name')
+    merged_df.drop(['games', 'games_started'], axis=1, inplace=True)
+
+    stat_df.drop(['Name','games', 'games_started'], axis=1, inplace=True)
+    stat_cols = [col for col in stat_df.columns]
     
-    result = c_df[c_df['Name'] == player_name]
-    distance_dict = {}
-    for _, row in c_df.iterrows():
-        # Calculate distance from result point to each player
-        dist = math.sqrt(math.pow(result['LR1']-row['LR1'], 2) + (math.pow(result['LR2']-row['LR2'], 2)))
-        distance_dict[row['Name']] = dist
+    target_player = merged_df[merged_df['Name'] == player_name].iloc[0]
+
+    for index, row in merged_df.iterrows():
+        dist = calculate_distance(row, target_player)
+        merged_df.loc[index, 'Distance'] = dist
     
-    sorted_dict = sorted(distance_dict.items(), key=lambda x:x[1])
-    
-    # Ignore the first point because that is the player itself
-    for i in range(num_players):
-        print(sorted_dict[1+i])
+    closest_players = merged_df.sort_values('Distance').iloc[:num_players + 1]
+
+    print(closest_players)
+
+    melted_df = closest_players.melt(id_vars=['Name', 'Cluster'], value_vars=stat_cols, var_name='Stat', value_name='Value')
+
+    fig = px.box(melted_df,
+                 x='Stat',
+                 y='Value',
+                 color='Name',
+                 title=f'Comparison: Top {num_players} Similar Players to {player_name}',
+                 color_discrete_sequence=px.colors.qualitative.Set2,
+                 points='all')
+    fig.update_layout(
+        xaxis_title='Statistic',
+        yaxis_title='Value',
+        legend_title='Clusters',
+        xaxis=dict(tickangle=45),
+        height=600,
+        width=1000
+    )
+
+    fig.show()
 
 def describe_clusters(c_df, stat_df):
     # Using averages per cluster for each stat
@@ -147,6 +177,7 @@ def create_autoencoder(data):
     input_data = Input(shape=(n_inputs, ))
     encoded = Dense(int(n_inputs / 4), activation='relu')(input_data)
     encoded = Dense(int(n_inputs / 6), activation='relu')(encoded)
+    
     latent = Dense(2, activation='relu')(encoded) 
 
     decoded = Dense(8, activation='relu')(latent)
