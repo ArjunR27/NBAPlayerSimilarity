@@ -51,6 +51,21 @@ def main():
     df_with_names = df.copy()
     df_with_names['Name'] = player_names_series.values
 
+    latent_df = pd.DataFrame(latent_representation, columns=['LR1', 'LR2'])
+    
+    # Calculates the correlations between the Latent Representation Values and Features
+    # LR1 = measures (negatively correlated) performance (shot attempts, games played, minutes played) --> low LR1 means higher performance player, high LR1 means lower performance player
+    # LR2 = measures volume (scoring, points, assists) --> low LR2 means less volumetric stats, high LR2 means high volumetric stats
+    correlations = pd.DataFrame(
+        {
+            'Feature': df.columns,
+            'LR1 Correlation': [np.corrcoef(df[col], latent_df['LR1'])[0, 1] for col in df.columns],
+            'LR2 Correlation': [np.corrcoef(df[col], latent_df['LR2'])[0, 1] for col in df.columns],
+        }
+    )
+    correlations = correlations.sort_values(by=['LR1 Correlation', 'LR2 Correlation'], ascending=False)
+    print(correlations)
+
     # Loop to repeatedly ask for similar players
     while True:
         player_name = input("What player do you want to find similar players for? ")
@@ -197,7 +212,7 @@ def create_autoencoder(data):
     encoded = Dense(int(n_inputs / 4), activation='relu')(input_data)
     encoded = Dense(int(n_inputs / 6), activation='relu')(encoded)
     
-    latent = Dense(2, activation='relu')(encoded) 
+    latent = Dense(2, activation='relu')(encoded)
 
     decoded = Dense(8, activation='relu')(latent)
     decoded = Dense(int(n_inputs / 6), activation='relu')(decoded)
@@ -211,7 +226,7 @@ def create_autoencoder(data):
     autoencoder.fit(data, data, epochs=75)
 
     latent_representation = encoder.predict(data)
-    
+
     return autoencoder, latent_representation
 
 
