@@ -14,7 +14,6 @@ import math
 import seaborn as sns
 
 def main():
-    # Ensuring reproductibility by setting the random seeds
     tf.random.set_seed(42)
     np.random.seed(42)
     random.seed(42)
@@ -25,7 +24,7 @@ def main():
     df = df.dropna()
     player_names = df['name_display'].values
     df.drop(['name_display'], axis=1, inplace=True)
-    
+
     scaler = MinMaxScaler()
     df_scaled = scaler.fit_transform(df)
 
@@ -44,32 +43,36 @@ def main():
     player_clusters = pd.DataFrame({'Player': player_names, 'Cluster': cluster_labels})
     player_clusters.to_csv('player_clusters.csv')
 
-    # 2 dimensional plot
+    # 2-dimensional plot
     c_df2 = pd.DataFrame(latent_representation, columns=['LR1', 'LR2'])
     c_df2['Cluster'] = cluster_labels
     c_df2['Name'] = player_names
     plot_2d(c_df2)
 
-    # 3 dimensional plot
-    """
-    c_df3 = pd.DataFrame(latent_representation, columns=['LR1', 'LR2', 'LR3])
-    c_df3['Cluster'] = cluster_labels
-    c_df3['Name'] = player_names
-    plot_3d(c_df2)
-    """
-
     player_names_series = pd.Series(player_names, name='Name')
     df_with_names = df.copy()
     df_with_names['Name'] = player_names_series.values
 
-    player_name = input("What player do you want to find similar players for? ")
-    num_players = int(input("How many similar players are you looking for? "))
-    
-    
-    find_similar_players(c_df2, df_with_names, player_name, num_players)
-    
+    # Loop to repeatedly ask for similar players
+    while True:
+        player_name = input("What player do you want to find similar players for? ")
+        if player_name not in player_names:
+            print(f"Player '{player_name}' not found. Please try again.")
+            continue
 
-    # describe_clusters(c_df2, df_with_names)
+        try:
+            num_players = int(input("How many similar players are you looking for? "))
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+            continue
+
+        find_similar_players(c_df2, df_with_names, player_name, num_players)
+
+        cont = input("Do you want to find similar players for another player? (yes/no): ").strip().lower()
+        if cont != 'yes':
+            print("Exiting")
+            break
+
 
 def elbow_graph(data): 
     n_inputs = data.shape[1]
@@ -91,18 +94,19 @@ def calculate_distance(row, target_player):
     return math.sqrt(math.pow(target_player['LR1']-row['LR1'], 2) + (math.pow(target_player['LR2']-row['LR2'], 2)))
 
 def find_similar_players(c_df, stat_df, player_name, num_players):
-    merged_df = pd.merge(c_df, stat_df, on='Name')
+    stat_df_copy = stat_df.copy()
+
+    merged_df = pd.merge(c_df, stat_df_copy, on='Name')
     merged_df.drop(['games', 'games_started'], axis=1, inplace=True)
 
-    stat_df.drop(['Name','games', 'games_started'], axis=1, inplace=True)
-    stat_cols = [col for col in stat_df.columns]
-    
+    stat_df_copy.drop(['Name', 'games', 'games_started'], axis=1, inplace=True)
+    stat_cols = [col for col in stat_df_copy.columns]
     target_player = merged_df[merged_df['Name'] == player_name].iloc[0]
 
     for index, row in merged_df.iterrows():
         dist = calculate_distance(row, target_player)
         merged_df.loc[index, 'Distance'] = dist
-    
+
     closest_players = merged_df.sort_values('Distance').iloc[:num_players + 1]
 
     print(closest_players)
@@ -126,6 +130,14 @@ def find_similar_players(c_df, stat_df, player_name, num_players):
     )
 
     fig.show()
+
+
+def search_player(stats, autoencoder):
+    # stats would be a list of player stats
+    # we can then run this 'fake' player through the latent representation and
+    # 'fake a point' and then find players closest/ which cluster the player is in
+    return NotImplementedError
+
 
 def describe_clusters(c_df, stat_df):
     # Using averages per cluster for each stat
@@ -158,6 +170,15 @@ def describe_clusters(c_df, stat_df):
 
     fig.show()
 
+    """
+    Look at which clusters excel at what
+    Create some basic text descriptions of what each cluster describes
+    high points = scorer
+    high shots = volume shot taker
+    high mins = high usage
+    etc.
+    """
+
 def plot_2d(c_df):
     fig = px.scatter(c_df, x='LR1', y='LR2', color='Cluster', hover_name='Name', 
                      title="K-Means Clusters", 
@@ -189,7 +210,7 @@ def create_autoencoder(data):
     encoder = Model(input_data, latent)
 
     autoencoder.compile(optimizer='adam', loss='mse')
-    autoencoder.fit(data, data, epochs=35)
+    autoencoder.fit(data, data, epochs=50)
 
     latent_representation = encoder.predict(data)
     
