@@ -19,7 +19,7 @@ def main():
     random.seed(42)
 
     # Player Averages
-    df = pd.read_csv('player_data1.csv')
+    df = pd.read_csv('./season_data/player_data_2020.csv')
     df.drop(['age', 'awards', 'pos', 'team_name_abbr'], axis=1, inplace=True)
     df = df.dropna()
     player_names = df['name_display'].values
@@ -40,8 +40,6 @@ def main():
     cluster_df['Cluster'] = cluster_labels
     cluster_df['Name'] = player_names
 
-    player_clusters = pd.DataFrame({'Player': player_names, 'Cluster': cluster_labels})
-    player_clusters.to_csv('player_clusters.csv')
 
     # 2-dimensional plot
     c_df2 = pd.DataFrame(latent_representation, columns=['LR1', 'LR2'])
@@ -210,7 +208,7 @@ def create_autoencoder(data):
     encoder = Model(input_data, latent)
 
     autoencoder.compile(optimizer='adam', loss='mse')
-    autoencoder.fit(data, data, epochs=50)
+    autoencoder.fit(data, data, epochs=75)
 
     latent_representation = encoder.predict(data)
     
