@@ -12,14 +12,24 @@ import matplotlib.pyplot as plt
 import plotly.express as px
 import math
 import seaborn as sns
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
-def main():
+app = Flask(__name__)
+CORS(app)
+c_df2 = None
+df_with_names = None
+player_names = None
+
+def initialize(year):
+    print("initializing")
+    global c_df2, df_with_names, player_names
     tf.random.set_seed(42)
     np.random.seed(42)
     random.seed(42)
 
     # Player Averages
-    df = pd.read_csv('./season_data/player_data_2020.csv')
+    df = pd.read_csv(f'./season_data/player_data_{year}.csv')
     df.drop(['age', 'awards', 'pos', 'team_name_abbr'], axis=1, inplace=True)
     df = df.dropna()
     player_names = df['name_display'].values
@@ -45,7 +55,7 @@ def main():
     c_df2 = pd.DataFrame(latent_representation, columns=['LR1', 'LR2'])
     c_df2['Cluster'] = cluster_labels
     c_df2['Name'] = player_names
-    plot_2d(c_df2)
+    # plot_2d(c_df2)
 
     player_names_series = pd.Series(player_names, name='Name')
     df_with_names = df.copy()
@@ -65,26 +75,27 @@ def main():
     )
     correlations = correlations.sort_values(by=['LR1 Correlation', 'LR2 Correlation'], ascending=False)
     print(correlations)
+    
 
     # Loop to repeatedly ask for similar players
-    while True:
-        player_name = input("What player do you want to find similar players for? ")
-        if player_name not in player_names:
-            print(f"Player '{player_name}' not found. Please try again.")
-            continue
+    # while True:
+    #     player_name = input("What player do you want to find similar players for? ")
+    #     if player_name not in player_names:
+    #         print(f"Player '{player_name}' not found. Please try again.")
+    #         continue
 
-        try:
-            num_players = int(input("How many similar players are you looking for? "))
-        except ValueError:
-            print("Invalid input. Please enter a number.")
-            continue
+    #     try:
+    #         num_players = int(input("How many similar players are you looking for? "))
+    #     except ValueError:
+    #         print("Invalid input. Please enter a number.")
+    #         continue
 
-        find_similar_players(c_df2, df_with_names, player_name, num_players)
+    #     find_similar_players(c_df2, df_with_names, player_name, num_players)
 
-        cont = input("Do you want to find similar players for another player? (yes/no): ").strip().lower()
-        if cont != 'yes':
-            print("Exiting")
-            break
+    #     cont = input("Do you want to find similar players for another player? (yes/no): ").strip().lower()
+    #     if cont != 'yes':
+    #         print("Exiting")
+    #         break
 
 
 def elbow_graph(data): 
@@ -106,6 +117,35 @@ def elbow_graph(data):
 def calculate_distance(row, target_player):
     return math.sqrt(math.pow(target_player['LR1']-row['LR1'], 2) + (math.pow(target_player['LR2']-row['LR2'], 2)))
 
+@app.route('/predict', methods=['POST'])
+def predict():
+    
+    data = request.json  # Get JSON input
+    player_name = data.get('playerName')
+    num_players = data.get('numberPlayers')
+    curr_c_df2 = pd.DataFrame(data.get('c_df2'))
+    curr_df_with_names = pd.DataFrame(data.get('df_with_names'))
+    
+    if curr_c_df2.empty or player_name not in player_names or num_players < 1:
+        return jsonify([])
+    similar_players = find_similar_players(curr_c_df2, curr_df_with_names, player_name, num_players)
+    print(similar_players)
+    result = similar_players['Name'].tolist()[1:]
+
+    return jsonify(result)
+
+@app.route('/build', methods=['POST'])
+def build():
+    global c_df2, df_with_names
+    data = request.json  # Get JSON input
+    print(data)
+    year = data.get('year')
+    if year < 2000 or year > 2024:
+        return jsonify([])
+    initialize(year)
+    return jsonify([c_df2.to_dict(orient='list'), df_with_names.to_dict(orient='list')])
+
+
 def find_similar_players(c_df, stat_df, player_name, num_players):
     stat_df_copy = stat_df.copy()
 
@@ -123,26 +163,26 @@ def find_similar_players(c_df, stat_df, player_name, num_players):
     closest_players = merged_df.sort_values('Distance').iloc[:num_players + 1]
 
     print(closest_players)
+    return closest_players
+    # melted_df = closest_players.melt(id_vars=['Name', 'Cluster'], value_vars=stat_cols, var_name='Stat', value_name='Value')
 
-    melted_df = closest_players.melt(id_vars=['Name', 'Cluster'], value_vars=stat_cols, var_name='Stat', value_name='Value')
+    # fig = px.box(melted_df,
+    #              x='Stat',
+    #              y='Value',
+    #              color='Name',
+    #              title=f'Comparison: Top {num_players} Similar Players to {player_name}',
+    #              color_discrete_sequence=px.colors.qualitative.Set2,
+    #              points='all')
+    # fig.update_layout(
+    #     xaxis_title='Statistic',
+    #     yaxis_title='Value',
+    #     legend_title='Clusters',
+    #     xaxis=dict(tickangle=45),
+    #     height=600,
+    #     width=1000
+    # )
 
-    fig = px.box(melted_df,
-                 x='Stat',
-                 y='Value',
-                 color='Name',
-                 title=f'Comparison: Top {num_players} Similar Players to {player_name}',
-                 color_discrete_sequence=px.colors.qualitative.Set2,
-                 points='all')
-    fig.update_layout(
-        xaxis_title='Statistic',
-        yaxis_title='Value',
-        legend_title='Clusters',
-        xaxis=dict(tickangle=45),
-        height=600,
-        width=1000
-    )
-
-    fig.show()
+    # fig.show()
 
 
 def search_player(stats, autoencoder):
@@ -232,4 +272,5 @@ def create_autoencoder(data):
 
 
 if __name__ == "__main__":
-    main()
+    app.run()
+    
