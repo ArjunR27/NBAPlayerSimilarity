@@ -20,6 +20,7 @@ CORS(app)
 c_df2 = None
 df_with_names = None
 player_names = None
+melted_df = None
 
 def initialize(year):
     print("initializing")
@@ -119,7 +120,7 @@ def calculate_distance(row, target_player):
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    
+    global melted_df
     data = request.json  # Get JSON input
     player_name = data.get('playerName')
     num_players = data.get('numberPlayers')
@@ -132,7 +133,7 @@ def predict():
     print(similar_players)
     result = similar_players['Name'].tolist()[1:]
 
-    return jsonify(result)
+    return jsonify([result, melted_df.to_dict(orient='list')])
 
 @app.route('/build', methods=['POST'])
 def build():
@@ -147,6 +148,7 @@ def build():
 
 
 def find_similar_players(c_df, stat_df, player_name, num_players):
+    global melted_df
     stat_df_copy = stat_df.copy()
 
     merged_df = pd.merge(c_df, stat_df_copy, on='Name')
@@ -163,9 +165,9 @@ def find_similar_players(c_df, stat_df, player_name, num_players):
     closest_players = merged_df.sort_values('Distance').iloc[:num_players + 1]
 
     print(closest_players)
+    
+    melted_df = closest_players.melt(id_vars=['Name', 'Cluster'], value_vars=stat_cols, var_name='Stat', value_name='Value')
     return closest_players
-    # melted_df = closest_players.melt(id_vars=['Name', 'Cluster'], value_vars=stat_cols, var_name='Stat', value_name='Value')
-
     # fig = px.box(melted_df,
     #              x='Stat',
     #              y='Value',

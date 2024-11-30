@@ -39,6 +39,9 @@
 }
 
 .player-similarity{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   width: 50%;
   height: 100%;
 }
