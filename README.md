@@ -6,25 +6,35 @@ python -m venv venv
 ```
 
 ### For Windows
-```venv\Scripts\activate.bat```
+```
+venv\Scripts\activate.bat
+```
 
 ### Frontend
 First
 
-```npm install```
+```
+npm install
+```
 
 Then
 
-```npm run dev```
+```
+npm run dev
+```
 
 ### Model
 Within the virtual environment
 
-```pip install -r requirements.txt```
+```
+pip install -r requirements.txt
+```
 
 Then
 
-```python autoencoder.py```
+```
+python autoencoder.py
+```
 
 
 You should now be able to access the site completely
