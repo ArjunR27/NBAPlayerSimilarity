@@ -50,20 +50,38 @@ export default function PlayerSimilarity(props: PlayerSimilarityProps) {
     }
   };
 
+  function generateColorMapping(names: string[]) {
+    const uniqueNames = [...new Set(names)];
+    const colors = uniqueNames.map(
+      (_, index) => `hsl(${(index * 360) / uniqueNames.length}, 70%, 50%)`
+    );
+    return uniqueNames.reduce((acc, name, index) => {
+      acc[name] = colors[index];
+      return acc;
+    }, {} as Record<string, string>);
+  }
+
   const plotData: Partial<ScatterData>[] =
     melted_df != null
-      ? [
-          {
-            x: melted_df["Stat"],
-            y: melted_df["Value"],
-            text: melted_df["Name"], // Add hover names
-            type: "scatter",
-            mode: "markers",
-            marker: {
-              size: 10,
+      ? (() => {
+          // Generate color mapping for players
+          const nameToColor = generateColorMapping(melted_df["Name"]);
+          const colors = melted_df["Name"].map((name) => nameToColor[name]);
+
+          return [
+            {
+              x: melted_df["Stat"],
+              y: melted_df["Value"],
+              text: melted_df["Name"], // Add hover names
+              type: "scatter",
+              mode: "markers",
+              marker: {
+                size: 10,
+                color: colors, // Use the mapped colors
+              },
             },
-          },
-        ]
+          ];
+        })()
       : [];
 
   // Layout configuration
